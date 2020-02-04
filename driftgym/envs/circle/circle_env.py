@@ -47,7 +47,7 @@ class CircleEnv(VehicleEnv):
 
         # Radius of trajectory to follow
         self.radius = radius
-
+        self._max_episode_steps=100
         # Reward function parameters
         self._lambda1 = 0.25
         self._lambda2 = 0.25
@@ -55,7 +55,7 @@ class CircleEnv(VehicleEnv):
 
     @property
     def observation_space(self):
-        return gym.Box(low=-np.inf, high=np.inf, shape=(4,))
+        return gym.spaces.Box(low=-np.inf, high=np.inf, shape=(4,))
 
 
     @property

@@ -43,7 +43,7 @@ class VehicleEnv(gym.Env):
         """
         # Load estimated parameters for robot
         if robot_type == 'RCCar':
-            stream = open('driftgym/envs/model/model_params/rccar.yml','r')
+            stream = open('/home/hsikchi/work/driftgym/driftgym/envs/model/model_params/rccar.yml','r')
             self._params = yaml.load(stream, Loader=yaml.FullLoader)
         elif robot_type == 'MRZR':
             stream = open('driftgym/envs/model/model_params/mrzr.yml','r')
@@ -66,7 +66,7 @@ class VehicleEnv(gym.Env):
         # Note: dt is measured to be 0.035, but we train with longer dt
         #       for more stability in commanded actions.
         self._dt = dt
-
+        self.steps_taken = 0
         # Instantiates object handling simulation renderings
         self._renderer = None
 
@@ -97,7 +97,7 @@ class VehicleEnv(gym.Env):
         self._action = None
         self._state = self.get_initial_state
         observation = self.state_to_observation(self._state)
-
+        self.steps_taken=0
         # Reset renderer if available
         if self._renderer is not None:
             self._renderer.reset()
@@ -110,6 +110,7 @@ class VehicleEnv(gym.Env):
         Move one iteration forward in simulation.
         """
         # Place limits on action based on mechanical constraints
+        self.steps_taken+=1
         action_min = [VehicleEnv._MIN_VELOCITY, -VehicleEnv._MAX_STEER_ANGLE]
         action_max = [VehicleEnv._MAX_VELOCITY, VehicleEnv._MAX_STEER_ANGLE]
         action = np.clip(action, a_min=action_min, a_max=action_max)
@@ -120,7 +121,10 @@ class VehicleEnv(gym.Env):
         self._state = nextstate
         reward, info = self.get_reward(nextstate, action)
         observation = self.state_to_observation(nextstate)
-        done=False
+        if(self.steps_taken>=self.horizon):
+            done=True
+        else:
+            done=False
         return observation,reward,done,info
 
         # return Step(observation=observation, reward=reward, done=False,

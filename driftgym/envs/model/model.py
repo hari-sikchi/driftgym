@@ -51,8 +51,7 @@ class DynamicBicycleModel(object):
         Update state after some timestep.
         """
         t = np.array([0, dt])
-        print(self._dynamics(X, t, U))
-        print(X)
+
         X_new = solve_ivp(
             fun=(lambda t, X: self._dynamics(X, t, U)),
             t_span=t, y0=X, atol=1e-5)
