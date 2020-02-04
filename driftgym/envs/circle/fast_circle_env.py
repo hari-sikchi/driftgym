@@ -8,9 +8,8 @@ Environment for training local planner to follow circles as fast as possible.
 
 import numpy as np
 
-from rllab.envs.base import Step
 
-from aa_simulation.envs.circle.circle_env import CircleEnv
+from driftgym.envs.circle.circle_env import CircleEnv
 
 
 class FastCircleEnv(CircleEnv):
