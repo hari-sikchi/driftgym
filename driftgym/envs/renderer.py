@@ -64,7 +64,7 @@ class _Renderer(object):
         self._car = None
 
 
-    def update(self, state, action):
+    def update(self, state, action,unsafe_action=None):
         """
         Update visualization to show new state.
         """
@@ -72,6 +72,7 @@ class _Renderer(object):
             steer = action[1]
         else:
             steer = 0
+        # print(state)
         pos_x = state[0]
         pos_y = state[1]
         pos_yaw = state[2]
@@ -79,7 +80,10 @@ class _Renderer(object):
         self._y.append(pos_y)
         self._trajectory.set_xdata(self._x)
         self._trajectory.set_ydata(self._y)
-        self._draw_car(pos_x, pos_y, pos_yaw, steer)
+        unsafe_steer = None
+        if unsafe_action is not None:
+            unsafe_steer=unsafe_action[1]
+        self._draw_car(pos_x, pos_y, pos_yaw, steer,unsafe_steer=unsafe_steer)
         self._fig.canvas.draw()
         plt.pause(0.001)
 
@@ -94,7 +98,7 @@ class _Renderer(object):
         self._trajectory.set_ydata(self._y)
 
 
-    def _draw_car(self, x, y, yaw, steer):
+    def _draw_car(self, x, y, yaw, steer,unsafe_steer=None):
         """
         Draw car on simulation.
         """
@@ -109,6 +113,8 @@ class _Renderer(object):
             self._wheel_fl.remove()
             self._wheel_rr.remove()
             self._wheel_rl.remove()
+            # if unsafe_steer is not None:
+            self._unsafe_wheel_fr.remove()
 
         # Get coordinate transformations
         pos_tf = np.array([
@@ -124,10 +130,24 @@ class _Renderer(object):
             [np.sin(steer), np.cos(steer), 0],
             [0, 0, 1]])
 
+        if unsafe_steer is not None:
+            pos_unsafe_steer = np.array([
+                [np.cos(unsafe_steer), -np.sin(unsafe_steer), 0],
+                [np.sin(unsafe_steer), np.cos(unsafe_steer), 0],
+                [0, 0, 1]])
+            pos_unsafe_wheel_fr=ft.reduce(np.dot, [pos_tf, self._wheel_fr_tf,
+            pos_unsafe_steer, self._wheel_coords])
+            self._unsafe_wheel_fr = patches.Polygon(pos_unsafe_wheel_fr[:2].T, linewidth=1,
+                    edgecolor='g', facecolor='none')
+            
+
         # Apply coordinate transform to chassis and wheels
         pos_body = np.dot(pos_tf, self._car_coords)
         pos_wheel_fr = ft.reduce(np.dot, [pos_tf, self._wheel_fr_tf,
             pos_steer, self._wheel_coords])
+        
+        # print(pos_wheel_fr)
+        # exit()
         pos_wheel_fl = ft.reduce(np.dot, [pos_tf, self._wheel_fl_tf,
             pos_steer, self._wheel_coords])
         pos_wheel_rr = np.dot(pos_tf, self._wheel_rr_tf)
@@ -144,6 +164,9 @@ class _Renderer(object):
                 edgecolor='r', facecolor='none')
         self._wheel_rl = patches.Polygon(pos_wheel_rl[:2].T, linewidth=1,
                 edgecolor='r', facecolor='none')
+        if unsafe_steer is not None:
+            self._ax.add_patch(self._unsafe_wheel_fr)
+
         self._ax.add_patch(self._car)
         self._ax.add_patch(self._wheel_fr)
         self._ax.add_patch(self._wheel_fl)
@@ -171,8 +194,8 @@ class _Renderer(object):
             [-wheel_w, wheel_w, wheel_w, -wheel_w, -wheel_w],
             [1, 1, 1, 1, 1]])
         self._wheel_fr_tf = np.array([
-            [1, 0, L_f],
-            [0, 1, -tw2],
+            [5, 0, L_f],
+            [0, 5, -tw2],
             [0, 0, 1]])
         self._wheel_fl_tf = np.array([
             [1, 0, L_f],

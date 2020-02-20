@@ -23,10 +23,10 @@ class VehicleEnv(gym.Env):
     Simulation environment for a FFAST RC car.
     """
 
-    _MIN_VELOCITY = 0.0
+    _MIN_VELOCITY = 0.5
     _MAX_VELOCITY = 10.0
     _MAX_STEER_ANGLE = np.pi / 6
-    _HORIZON_LENGTH = 100
+    _HORIZON_LENGTH = 1000
 
 
     def __init__(
@@ -43,7 +43,7 @@ class VehicleEnv(gym.Env):
         """
         # Load estimated parameters for robot
         if robot_type == 'RCCar':
-            stream = open('/home/hsikchi/work/driftgym/driftgym/envs/model/model_params/rccar.yml','r')
+            stream = open('/Users/harshit/work/driftgym/driftgym/envs/model/model_params/rccar.yml','r')
             self._params = yaml.load(stream, Loader=yaml.FullLoader)
         elif robot_type == 'MRZR':
             stream = open('driftgym/envs/model/model_params/mrzr.yml','r')
@@ -54,6 +54,7 @@ class VehicleEnv(gym.Env):
         # Instantiate vehicle model for simulation
         self._state = None
         self._action = None
+        self._unsafe_action=None
         self.target_velocity = target_velocity
         if model_type == 'BrushTireModel':
             self._model = BrushTireModel(self._params, mu_s, mu_k)
@@ -105,7 +106,7 @@ class VehicleEnv(gym.Env):
         return observation
 
 
-    def step(self, action):
+    def step(self, action,unsafe_action=None):
         """
         Move one iteration forward in simulation.
         """
@@ -116,6 +117,8 @@ class VehicleEnv(gym.Env):
         action = np.clip(action, a_min=action_min, a_max=action_max)
 
         self._action = action
+        if unsafe_action is not None:
+            self._unsafe_action=unsafe_action
         nextstate = self._model.state_transition(self._state, action,
                 self._dt)
         self._state = nextstate
@@ -125,10 +128,32 @@ class VehicleEnv(gym.Env):
             done=True
         else:
             done=False
+
         return observation,reward,done,info
 
-        # return Step(observation=observation, reward=reward, done=False,
-        #         dist=info['dist'], vel=info['vel'], kappa=self._model.kappa)
+
+    def get_linear_dynamics(self,prev_action=None):
+        current_observation = self.state_to_observation(self._state)
+        linear_dynamics_a = np.zeros((self.action_space.shape[0],self.observation_space.shape[0]))
+        for action_dim in range(self.action_space.shape[0]):
+            d_action = 0.001
+            if prev_action is None:
+                action = np.zeros(self.action_space.shape[0])
+            else:
+                action = prev_action.copy()
+            next_base_state = self._model.state_transition(self._state, action,
+                    self._dt)
+            next_base_observation =  self.state_to_observation(next_base_state)
+            action[action_dim]+=d_action
+            nextstate = self._model.state_transition(self._state, action,
+                    self._dt)
+
+
+            next_observation = self.state_to_observation(nextstate)
+            linear_dynamics_a[action_dim,:]=(next_observation-current_observation)/d_action        
+            
+        return linear_dynamics_a,next_base_observation
+
 
 
     def render(self):
@@ -138,7 +163,8 @@ class VehicleEnv(gym.Env):
         if self._renderer == None:
             self._renderer = _Renderer(self._params,
                     self.__class__.__name__)
-        self._renderer.update(self._state, self._action)
+        # print(self._state)
+        self._renderer.update(self._state, self._action,unsafe_action=self._unsafe_action)
 
 
     # def log_diagnostics(self, paths):

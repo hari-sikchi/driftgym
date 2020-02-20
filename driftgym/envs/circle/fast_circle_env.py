@@ -68,5 +68,6 @@ class FastCircleEnv(CircleEnv):
         info = {}
         info['dist'] = distance
         info['vel'] = velocity
+        
         return reward, info
 

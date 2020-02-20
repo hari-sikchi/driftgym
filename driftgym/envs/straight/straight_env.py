@@ -24,7 +24,7 @@ class StraightEnv(VehicleEnv):
     def __init__(
             self,
             target_velocity=1.0,
-            dt=0.035,
+            dt=0.005,
             model_type='BrushTireModel',
             robot_type='RCCar',
             mu_s=1.37,
@@ -45,6 +45,7 @@ class StraightEnv(VehicleEnv):
 
         # Reward function parameters
         self._lambda1 = 0.25
+        self._max_episode_steps=300
 
 
     @property
@@ -99,6 +100,7 @@ class StraightEnv(VehicleEnv):
         info = {}
         info['dist'] = distance
         info['vel'] = velocity
+        info['cost'] = 5 * (abs(distance)>1)
         return reward, info
 
 
